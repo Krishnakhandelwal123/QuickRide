@@ -6,6 +6,7 @@ const app=express();
 const cors=require('cors');
 const connectToDb=require('./db/db');
 const userRoutes=require('./routes/user.routes');
+const captainRoutes=require('./routes/captain.routes');
 
 app.use(cors());
 app.use(express.json());
@@ -17,5 +18,6 @@ app.get('/',(req,res)=>{
        res.send("hello");
 })
 app.use('/users',userRoutes);  
+app.use('/captains',captainRoutes);
 
 module.exports=app;
