@@ -279,3 +279,78 @@ curl -X POST http://localhost:4000/captains/register \
     "password": "strongpassword"
   }'
 ```
+
+---
+
+## POST /captains/login
+
+Description
+- Authenticate an existing captain and return an auth token.
+- Controller: backend/controllers/captain.controller.js -> loginCaptain
+- Model helpers: backend/models/captain.model.js (comparePassword, generateAuthToken)
+
+URL
+- /captains/login
+
+Method
+- POST
+
+Headers
+- Content-Type: application/json
+
+Request body (JSON)
+```json
+{
+  "email": "valid email",
+  "password": "string (min 6 chars)"
+}
+```
+
+Validation (from backend/routes/captain.routes.js)
+- email: must be a valid email
+- password: min length 6
+
+Notes on processing
+- Controller loads the captain with `.select('+password')` to compare password.
+- Password comparison uses captain.comparePassword (bcrypt).
+- On success, controller returns a JWT from captain.generateAuthToken.
+- The response omits the password (returns captain object with _id, fullname, email).
+
+Responses / Status codes
+- 200 OK
+  - Body:
+  ```json
+  {
+    "captain": {
+      "_id": "string",
+      "fullname": { "firstname": "string", "lastname": "string" },
+      "email": "string"
+    },
+    "token": "jwt-token-string"
+  }
+  ```
+  - Triggered when email and password are valid.
+- 400 Bad Request
+  - Body: { "errors": [ /* validation errors */ ] }
+  - Triggered when request validation fails.
+- 401 Unauthorized
+  - Body: { "message": "Invalid email or password" }
+  - Triggered when credentials are incorrect or captain not found.
+- 500 Internal Server Error
+  - Body: { "message": "Error logging in", "error": "error message" }
+
+Example curl
+```sh
+curl -X POST http://localhost:4000/captains/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jane.smith@example.com",
+    "password": "strongpassword"
+  }'
+```
+
+References
+- backend/routes/captain.routes.js
+- backend/controllers/captain.controller.js
+- backend/services/captain.service.js
+- backend/models/captain.model.js
