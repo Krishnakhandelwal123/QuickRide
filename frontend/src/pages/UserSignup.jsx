@@ -1,26 +1,45 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate} from "react-router-dom";
+import axios from "axios";
+import {UserDataContext} from "../context/UserContext";
 
 const UserSignup = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [userData, setUserData] = useState({});
 
-  const handleSubmit = (e) => {
+  const navigate = useNavigate();
+
+  const {user, setUser} = React.useContext(UserDataContext);
+
+  const handleSubmit = async(e) => {
     e.preventDefault();
 
-    const data = {
-      fullName:{firstName, lastName},
+    const newUser = {
+      fullname: { 
+       firstname:firstName, 
+       lastname:lastName 
+      },
       email,
       password,
     };
-    setUserData(data);
-    setFirstName("");
-    setLastName("");
-    setEmail("");
-    setPassword("");
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/users/register`, newUser);
+      if(response.status === 201){
+        const data=response.data;
+        setUser(data.user)
+        localStorage.setItem('user_token',data.token)
+        setFirstName("");
+        setLastName("");
+        setEmail("");
+        setPassword("");
+        navigate("/home");
+      }
+    } catch (error) {
+      console.error("Signup failed:", error);
+      // You could show an error message to the user here
+    }
   };
 
   return (
@@ -31,7 +50,7 @@ const UserSignup = () => {
 
         <form onSubmit={handleSubmit}>
           {/* First and Last Name */}
-            <label className="block text-gray-900 font-medium mb-1">What's Your name?</label>
+          <label className="block text-gray-900 font-medium mb-1">What's Your name?</label>
           <div className="flex gap-3 mb-5">
             <div className="w-1/2">
               <input

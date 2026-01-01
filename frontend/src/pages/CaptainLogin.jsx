@@ -1,20 +1,38 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { CaptainDataContext } from '../context/CaptainContext';
 
 const CaptainLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [CaptainData, setCaptainData] = useState({})
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const navigate = useNavigate();
+  const { captain,setCaptain } = useContext(CaptainDataContext);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setCaptainData({
-      email: email,
-      password: password
-    })
-    setEmail('');
-    setPassword('');
-  }
+    setError(''); // Reset error message on new submission
+
+    const captainData = {
+      email,
+      password
+    };
+
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/captains/login`, captainData);
+      if (response.status === 200) {
+        const { captain, token } = response.data;
+        setCaptain(captain);
+        localStorage.setItem('captain_token', token); // Use a specific token key
+        navigate('/captain-home');
+      }
+    } catch (err) {
+      console.error("Captain login failed:", err.response ? err.response.data : err);
+      setError(err.response?.data?.message || "Login failed. Please try again.");
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col justify-between bg-white px-5 pt-10 pb-10">
@@ -29,9 +47,7 @@ const CaptainLogin = () => {
         </div>
 
 
-        <form onSubmit={(e) => {
-          handleSubmit(e)
-        }}>
+        <form onSubmit={handleSubmit}>
           {/* Email */}
           <label className="block text-gray-900 font-medium mb-1">What’s your email</label>
           <input
@@ -57,6 +73,11 @@ const CaptainLogin = () => {
             placeholder="password"
             className="w-full mt-1 bg-gray-100 text-gray-900 placeholder-gray-500 border border-gray-200 rounded-md px-3 py-3 mb-6 focus:outline-none focus:ring-2 focus:ring-black"
           />
+
+          {/* Error Message */}
+          {error && (
+            <p className="text-red-500 text-sm text-center mb-4">{error}</p>
+          )}
 
           {/* Login Button */}
           <button
