@@ -7,7 +7,7 @@ const locations = ['24b, vasundhara colony manipal university jaipur',
                    '45c, green park new delhi',
                    '12a, MG road bangalore',
                    '78d, marine drive mumbai']; 
-
+ 
     return (
         <div>
             {

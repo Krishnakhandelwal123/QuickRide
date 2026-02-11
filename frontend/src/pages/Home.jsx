@@ -7,9 +7,9 @@ import LocationPanal from '../components/LocationPanal';
 import VehiclePanal from '../components/VehiclePanal';
 import ConfirmRide from '../components/ConfirmRide';
 import LookingForDriver from '../components/LookingForDriver';
-import WaitForDriver from '../components/WaitForDriver';
+import WaitForDriver from '../components/WaitForDriver'; 
 
-const Home = () => {
+const Home = () => { 
   const [pickup, setPickup] = useState('')
   const [destination, setDestination] = useState('')
   const [panalOpen, setPanalOpen] = useState(false)

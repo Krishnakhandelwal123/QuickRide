@@ -4,7 +4,7 @@ import car from '../assets/car.png'
 const ConfirmRide = (props) => {
   return (
     <div className="relative px-3 pt-6">
-
+ 
       {/* Centered Close Button (moved up) */}
       <div
         onClick={() => props.setConfirmRidePanal(false)}
