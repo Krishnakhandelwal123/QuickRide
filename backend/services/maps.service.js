@@ -24,7 +24,7 @@ module.exports.getAddressCoordinate = async (address) => {
 
 module.exports.getDistanceTime = async (origin, destination) => {
      if(!origin || !destination) {
-        return res.status(400).json({ message: 'Origin and destination are required' });
+        throw new Error('Origin and destination are required');
     }
     const apiKey = process.env.GOOGLE_MAPS_API;
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&key=${apiKey}`;
@@ -48,7 +48,7 @@ module.exports.getDistanceTime = async (origin, destination) => {
 
 module.exports.getSuggestions = async (input) => {  
     if(!input) {
-        return res.status(400).json({ message: 'Input is required' });
+        throw new Error('Input is required');
     }
     const apiKey = process.env.GOOGLE_MAPS_API;
     const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&key=${apiKey}`;

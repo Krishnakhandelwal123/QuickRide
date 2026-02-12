@@ -17,7 +17,7 @@ router.get('/get-distance-time',
 )
 router.get('/get-suggestions',
     query('input').isString().isLength({ min: 3 }),
-    authMiddleware.authUser,
+    // suggestions are public (no auth) so users can see place autocomplete
     mapController.getSuggestions
 )
 

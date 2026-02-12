@@ -1,6 +1,52 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import axios from 'axios'
 
 const VehiclePanal = (props) => {
+  const [fares, setFares] = useState({
+    car: '₹---',
+    auto: '₹---',
+    moto: '₹---'
+  })
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (props.pickup && props.destination) {
+      fetchFares()
+    }
+  }, [props.pickup, props.destination])
+
+  const fetchFares = async () => {
+    setLoading(true)
+    try {
+      const res = await axios.get('http://localhost:4000/rides/get-fare', {
+        params: {
+          pickup: props.pickup,
+          destination: props.destination
+        },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        withCredentials: true
+      })
+      // res.data has { auto, car, moto } with prices
+      const fareData = res.data
+      setFares({
+        car: `₹${fareData.car}`,
+        auto: `₹${fareData.auto}`,
+        moto: `₹${fareData.moto}`
+      })
+    } catch (error) {
+      console.error('fare error', error)
+      setFares({
+        car: '₹---',
+        auto: '₹---',
+        moto: '₹---'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div>
       <h5 onClick={()=>{ 
@@ -16,7 +62,7 @@ const VehiclePanal = (props) => {
             <h5 className='font-medium text-sm'>2 mins away</h5>
             <p className='font-normal text-xs text-gray-600'>Affordable, compact rides</p>
           </div>
-          <h2 className='text-xl font-semibold'>$5.00</h2>
+          <h2 className='text-xl font-semibold'>{fares.car}</h2>
         </div>
         <div onClick={() =>{ props.setSelectedVehicle(1);
           props.setConfirmRidePanal(true)}} className={`flex border-2 active:border-black mb-2 rounded-2xl w-full p-3 items-center justify-between ${props.selectedVehicle === 1 ? 'border-black' : 'border-gray-200'}`}>
@@ -26,7 +72,7 @@ const VehiclePanal = (props) => {
             <h5 className='font-medium text-sm'>3 mins away</h5>
             <p className='font-normal text-xs text-gray-600'>Affordable, compact rides</p>
           </div>
-          <h2 className='text-xl font-semibold'>$3.5</h2>
+          <h2 className='text-xl font-semibold'>{fares.auto}</h2>
         </div>
         <div onClick={() =>{ props.setSelectedVehicle(2);
           props.setConfirmRidePanal(true)}} className={`flex border-2 active:border-black mb-2 rounded-2xl w-full p-3 items-center justify-between ${props.selectedVehicle === 2 ? 'border-black' : 'border-gray-200'}`}>
@@ -36,7 +82,7 @@ const VehiclePanal = (props) => {
             <h5 className='font-medium text-sm'>1 mins away</h5>
             <p className='font-normal text-xs text-gray-600'>Affordable, compact rides</p>
           </div>
-          <h2 className='text-xl font-semibold'>$2.00</h2>
+          <h2 className='text-xl font-semibold'>{fares.moto}</h2>
         </div>
     </div>
   )
