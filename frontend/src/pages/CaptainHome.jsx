@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef } from 'react'
+import React, { useState, useContext, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import 'remixicon/fonts/remixicon.css'
 import logo from '../assets/logo.png'
@@ -8,9 +8,63 @@ import RidePopUp from '../components/RidePopUp'
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import ConfirmRidePopUp from '../components/ConfirmRidePopUp'
- 
+import { SocketContext } from '../context/SocketContext'
+import { CaptainDataContext } from '../context/CaptainContext'
+
 const CaptainHome = () => {
+  const { socket } = useContext(SocketContext)
+  const { captain } = useContext(CaptainDataContext)
  
+  useEffect(() => { 
+    if (!captain?._id) return
+    const emitJoin = () => socket.emit('join', { userType: 'captain', userId: captain._id })
+    if (socket.connected) emitJoin()
+    socket.on('connect', emitJoin)
+    return () => socket.off('connect', emitJoin)
+  }, [socket, captain])
+
+  useEffect(() => {
+    if (!captain?._id) return
+    if (!navigator.geolocation) {
+      console.warn('Geolocation is not supported in this browser.')
+      return
+    }
+
+    const sendLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude
+          const lng = position.coords.longitude
+
+          if (socket?.connected) {
+            socket.emit('update-location-captain', {
+              userId: captain._id,
+              location: { lat, lng }
+            })
+          }
+        },
+        (error) => {
+          console.warn('Failed to get location:', error.message)
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 5000
+        }
+      )
+    }
+
+    // send once immediately, then every 10 seconds
+    sendLocation()
+    const intervalId = setInterval(sendLocation, 10000)
+
+    return () => clearInterval(intervalId)
+  }, [socket, captain])
+
+  socket.on('new-ride', (data) => {
+    console.log('New ride:', data)
+  })
+
   const RidePopUpPanalRef = useRef(null)
   const ConfirmRidePopUpPanalRef = useRef(null)
   const [RidePopUpPanal, setRidePopUpPanal] = useState(false)
