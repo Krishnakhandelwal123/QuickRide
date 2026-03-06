@@ -1,7 +1,37 @@
 import React from 'react'
 import car from '../assets/car.png'
 
-const WaitForDriver = (props) => {
+const VEHICLE_IMAGES = {
+  car,
+  auto: car,
+  bike: car,
+}
+
+const WaitForDriver = ({ ride }) => {
+  const otp = ride?.otp || '----'
+  const pickup = ride?.pickup || 'Pickup location'
+  const destination = ride?.destination || 'Destination'
+  const fareDisplay = ride?.fare != null ? String(ride.fare) : '---'
+
+  const captain = ride?.captain
+  const captainName = captain
+    ? `${captain.fullname?.firstname || ''} ${captain.fullname?.lastname || ''}`.trim() ||
+      captain.email ||
+      'Your driver'
+    : 'Your driver'
+
+  const vehicle = captain?.vehicle
+  const vehicleLabel = vehicle
+    ? `${vehicle.color || ''} ${vehicle.vehicleType || ''}`.trim() || 'Vehicle'
+    : 'Vehicle'
+  const vehiclePlate = vehicle?.plate || ''
+
+  const etaMinutes =
+    typeof ride?.duration === 'number' ? Math.max(1, Math.round(ride.duration / 60)) : 4
+
+  const vehicleImage =
+    (vehicle?.vehicleType && VEHICLE_IMAGES[vehicle.vehicleType]) || VEHICLE_IMAGES.car
+
   return (
     <div className="relative px-4 py-6 bg-white rounded-t-3xl">
 
@@ -9,14 +39,16 @@ const WaitForDriver = (props) => {
       <div className="flex items-center justify-between mb-4">
         {/* Arriving Box */}
         <div className="bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl">
-          <h1 className="text-2xl font-black text-gray-900 leading-none">4 min</h1>
+          <h1 className="text-2xl font-black text-gray-900 leading-none">
+            {etaMinutes} min
+          </h1>
           <p className="text-emerald-600 font-semibold text-xs tracking-tight">Arriving soon</p>
         </div>
         
         {/* OTP Box */}
         <div className="bg-gray-50 border border-gray-100 px-4 py-2 rounded-xl text-center">
            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">OTP</p>
-           <p className="text-2xl font-mono font-black text-gray-900 leading-none">4412</p>
+           <p className="text-2xl font-mono font-black text-gray-900 leading-none">{otp}</p>
         </div>
       </div>
 
@@ -35,14 +67,18 @@ const WaitForDriver = (props) => {
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-800">Sarthak Sharma</h2>
-            <p className="text-sm font-semibold text-gray-500 tracking-wide uppercase">White Suzuki Swift</p>
-            <p className="text-xs text-gray-400">RJ-14-CP-1234</p>
+            <h2 className="text-xl font-bold text-gray-800">{captainName}</h2>
+            <p className="text-sm font-semibold text-gray-500 tracking-wide uppercase">
+              {vehicleLabel}
+            </p>
+            {vehiclePlate && (
+              <p className="text-xs text-gray-400">{vehiclePlate}</p>
+            )}
           </div>
         </div>
         
         {/* Car Image (Compact) */}
-        <img className="h-14 object-contain" src={car} alt="car" />
+        <img className="h-14 object-contain" src={vehicleImage} alt="car" />
       </div>
 
       <div className="h-px bg-gray-100 mb-6" />
@@ -58,7 +94,7 @@ const WaitForDriver = (props) => {
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-tight">Pickup</h3>
-            <p className="text-md font-medium leading-snug">245/11-A, Vasundhara Colony, MUJ</p>
+            <p className="text-md font-medium leading-snug">{pickup}</p>
           </div>
         </div>
 
@@ -67,7 +103,7 @@ const WaitForDriver = (props) => {
           <i className="ri-map-pin-2-fill text-emerald-600 mt-1"></i>
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-tight">Drop-off</h3>
-            <p className="text-md font-medium leading-snug">242/13-B, Mahesh Nagar, Jaipur</p>
+            <p className="text-md font-medium leading-snug">{destination}</p>
           </div>
         </div>
 
@@ -76,7 +112,7 @@ const WaitForDriver = (props) => {
           <div className="flex items-center gap-3">
             <i className="text-2xl ri-money-rupee-circle-fill text-emerald-600"></i>
             <div>
-              <p className="text-lg font-bold">₹215.60</p>
+              <p className="text-lg font-bold">₹{fareDisplay}</p>
               <p className="text-xs text-gray-500">Payment</p>
             </div>
           </div>

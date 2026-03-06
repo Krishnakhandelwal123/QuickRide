@@ -57,14 +57,17 @@ module.exports.createRide = async ({
         throw new Error('All fields are required');
     }
 
-    const fare = await getFare(pickup, destination);
+    const fareMap = await getFare(pickup, destination);
+    const distanceTime = await mapService.getDistanceTime(pickup, destination);
 
-    const ride = rideModel.create({
+    const ride = await rideModel.create({
         user,
         pickup,
         destination,
         otp: getOtp(4),
-        fare: fare[ vehicleType ]
+        fare: fareMap[ vehicleType ],
+        distance: distanceTime.distance.value,
+        duration: distanceTime.duration.value
     })
     return ride;
 }

@@ -1,13 +1,40 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import logo from '../assets/logo.png'
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import FinishRide from './FinishRide';
+import { useLocation } from 'react-router-dom';
 
 const CaptainRiding = () => {
    const FinishRidePanalRef = useRef(null)
    const [FinishRidePanal, setFinishRidePanal] = useState(false)
+   const location = useLocation()
+   const [ride, setRide] = useState(() => location.state?.ride || null)
+
+   useEffect(() => {
+    if (location.state?.ride) {
+      setRide(location.state.ride)
+      try {
+        sessionStorage.setItem('active_ride_captain', JSON.stringify(location.state.ride))
+      } catch { /* ignore */ }
+      return
+    }
+    try {
+      const cached = sessionStorage.getItem('active_ride_captain')
+      if (cached) setRide(JSON.parse(cached))
+    } catch { /* ignore */ }
+   }, [location.state])
+
+   const distanceKm = useMemo(() => {
+    if (typeof ride?.distance !== 'number') return '—'
+    return `${(ride.distance / 1000).toFixed(1)} km`
+   }, [ride])
+
+   const etaMin = useMemo(() => {
+    if (typeof ride?.duration !== 'number') return '—'
+    return `${Math.max(1, Math.round(ride.duration / 60))} min`
+   }, [ride])
  useGSAP(() => {
     if (FinishRidePanal) {
       gsap.to(FinishRidePanalRef.current,{
@@ -64,7 +91,7 @@ const CaptainRiding = () => {
                 Distance to Drop
               </p>
               <h3 className="text-2xl font-semibold text-zinc-900">
-                4 km
+                {distanceKm}
               </h3>
             </div>
 
@@ -73,7 +100,7 @@ const CaptainRiding = () => {
                 ETA
               </p>
               <h3 className="text-2xl font-semibold text-zinc-900">
-                8 min
+                {etaMin}
               </h3>
             </div>
           </div>
@@ -89,7 +116,7 @@ const CaptainRiding = () => {
 
       </div>
       <div ref={FinishRidePanalRef} className='fixed  w-full z-10 bottom-0 translate-y-full rounded-t-[32px] bg-white px-3 py-6'>
-          <FinishRide />
+          <FinishRide ride={ride} />
         </div>
     </div>
   )

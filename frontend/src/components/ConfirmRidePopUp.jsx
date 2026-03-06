@@ -1,38 +1,104 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useContext, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import 'remixicon/fonts/remixicon.css'
+import { SocketContext } from '../context/SocketContext'
+import { CaptainDataContext } from '../context/CaptainContext'
 
 const ConfirmRidePopUp = ({ rideData, setConfirmRidePopUpPanal, onCancel, onNavigate }) => {
   const [otp, setOtp] = useState('')
+  const [otpError, setOtpError] = useState('')
+  const [isVerifying, setIsVerifying] = useState(false)
 
-  // Sample data - replace with actual props
-  const user = rideData?.user || {
-    name: 'Rajesh Kumar',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&h=150&auto=format&fit=crop',
-    phone: '+91 98765 43210'
+  const navigate = useNavigate()
+  const { socket } = useContext(SocketContext)
+  const { captain } = useContext(CaptainDataContext)
+
+  const sanitizedOtp = useMemo(() => (otp || '').replace(/\D/g, '').slice(0, 4), [otp])
+
+  const rideUser = rideData?.user
+
+  const user = {
+    name: rideUser
+      ? `${rideUser.fullname?.firstname || ''} ${rideUser.fullname?.lastname || ''}`.trim() ||
+        rideUser.email ||
+        'Passenger'
+      : 'Passenger',
+    image:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&h=150&auto=format&fit=crop',
+    phone: '+91 98765 43210',
   }
 
-  const pickup = rideData?.pickup || {
-    address: 'Vasundhara Colony, MUJ',
-    fullAddress: '245/11-A, Vasundhara Colony, Manipal University Jaipur'
-  }
+  const pickup = rideData
+    ? {
+        address: rideData.pickup,
+        fullAddress: rideData.pickup,
+      }
+    : {
+        address: 'Pickup',
+        fullAddress: 'Pickup location',
+      }
 
-  const destination = rideData?.destination || {
-    address: 'Mahesh Nagar, Jaipur',
-    fullAddress: '242/13-B, Mahesh Nagar, Jaipur, Rajasthan'
-  }
+  const destination = rideData
+    ? {
+        address: rideData.destination,
+        fullAddress: rideData.destination,
+      }
+    : {
+        address: 'Destination',
+        fullAddress: 'Destination location',
+      }
 
-  const fare = rideData?.fare || 215.60
-  const distance = rideData?.distance || '4.2 km'
-  const duration = rideData?.duration || '12 min'
+  const fare = rideData?.fare || 0
+  const distance =
+    typeof rideData?.distance === 'number'
+      ? `${(rideData.distance / 1000).toFixed(1)} km`
+      : '—'
+  const duration =
+    typeof rideData?.duration === 'number'
+      ? `${Math.round(rideData.duration / 60)} min`
+      : '—'
 
   const submitHandler = (e) => {
     e.preventDefault()
-    console.log("OTP Submitted:", otp)
+    if (!socket?.connected) {
+      setOtpError('Not connected. Please try again.')
+      return
+    }
+    if (!rideData?._id || !captain?._id) {
+      setOtpError('Ride not ready yet. Please try again.')
+      return
+    }
+    if (sanitizedOtp.length !== 4) {
+      setOtpError('Enter a valid 4-digit OTP.')
+      return
+    }
+
+    setIsVerifying(true)
+    setOtpError('')
+
+    socket.emit(
+      'start-ride',
+      { rideId: rideData._id, captainId: captain._id, otp: sanitizedOtp },
+      (res) => {
+        if (!res?.ok) {
+          setIsVerifying(false)
+          setOtpError(res?.message || 'Invalid OTP.')
+          return
+        }
+
+        setIsVerifying(false)
+        if (onNavigate) onNavigate()
+        setConfirmRidePopUpPanal(false)
+        try {
+          if (res?.ride) sessionStorage.setItem('active_ride_captain', JSON.stringify(res.ride))
+        } catch { /* ignore */ }
+        navigate('/captain-riding', { state: { ride: res?.ride || rideData } })
+      }
+    )
   }
 
   return (
-    <div className='pt-3'>
+    <div className='pt-3'> 
       <div className="px-5 pb-6">
         {/* User Info Section */}
         <div className="flex items-center gap-4 mb-5">
@@ -114,11 +180,24 @@ const ConfirmRidePopUp = ({ rideData, setConfirmRidePopUpPanal, onCancel, onNavi
         <form onSubmit={(e) => submitHandler(e)}>
           <input
             value={otp}
-            onChange={(e) => setOtp(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value
+              setOtp(next)
+              if (otpError) setOtpError('')
+            }}
             type="text"
             placeholder="Enter OTP"
+            inputMode="numeric"
+            pattern="\d*"
+            maxLength={4}
             className="bg-zinc-100 px-6 py-4 text-lg font-mono rounded-2xl w-full mb-5 focus:outline-none focus:ring-2 focus:ring-zinc-300"
           />
+
+          {otpError && (
+            <p className="text-sm font-semibold text-red-600 -mt-3 mb-5">
+              {otpError}
+            </p>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
@@ -129,12 +208,17 @@ const ConfirmRidePopUp = ({ rideData, setConfirmRidePopUpPanal, onCancel, onNavi
             >
               Cancel
             </button>
-            <Link
-              to="/captain-riding"
-              className="flex-1 bg-black text-white py-4 rounded-2xl font-semibold text-sm active:scale-[0.97] transition hover:bg-zinc-800 text-center"
+            <button
+              type="submit"
+              disabled={isVerifying || sanitizedOtp.length !== 4}
+              className={`flex-1 py-4 rounded-2xl font-semibold text-sm active:scale-[0.97] transition text-center ${
+                isVerifying || sanitizedOtp.length !== 4
+                  ? 'bg-zinc-300 text-zinc-600 cursor-not-allowed'
+                  : 'bg-black text-white hover:bg-zinc-800'
+              }`}
             >
-              Go to PickUp
-            </Link>
+              {isVerifying ? 'Verifying...' : 'Go to PickUp'}
+            </button>
           </div>
         </form>
       </div>

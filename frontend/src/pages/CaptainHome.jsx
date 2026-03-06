@@ -14,6 +14,7 @@ import { CaptainDataContext } from '../context/CaptainContext'
 const CaptainHome = () => {
   const { socket } = useContext(SocketContext)
   const { captain } = useContext(CaptainDataContext)
+  const [rideRequest, setRideRequest] = useState(null)
  
   useEffect(() => { 
     if (!captain?._id) return
@@ -61,9 +62,21 @@ const CaptainHome = () => {
     return () => clearInterval(intervalId)
   }, [socket, captain])
 
-  socket.on('new-ride', (data) => {
-    console.log('New ride:', data)
-  })
+  useEffect(() => {
+    if (!socket) return
+
+    const handleNewRide = (data) => {
+      console.log('New ride:', data)
+      setRideRequest(data)
+      setRidePopUpPanal(true)
+    }
+
+    socket.on('new-ride', handleNewRide)
+
+    return () => {
+      socket.off('new-ride', handleNewRide)
+    }
+  }, [socket])
 
   const RidePopUpPanalRef = useRef(null)
   const ConfirmRidePopUpPanalRef = useRef(null)
@@ -131,10 +144,24 @@ const CaptainHome = () => {
           <CaptainDetails />
         </div>
         <div ref={RidePopUpPanalRef} className='fixed pt-5 w-full z-10 bottom-0 translate-y-full rounded-t-[32px] bg-white px-3 py-6'>
-          <RidePopUp setRidePopUpPanal={setRidePopUpPanal} setConfirmRidePopUpPanal={setConfirmRidePopUpPanal}/>
+          <RidePopUp
+            setRidePopUpPanal={setRidePopUpPanal}
+            setConfirmRidePopUpPanal={setConfirmRidePopUpPanal}
+            rideRequest={rideRequest}
+            onAcceptRide={() => {
+              if (!socket || !rideRequest?._id || !captain?._id) return
+              socket.emit('accept-ride', {
+                rideId: rideRequest._id,
+                captainId: captain._id,
+              })
+            }}
+          />
         </div>
         <div ref={ConfirmRidePopUpPanalRef} className='fixed pt-5 w-full z-10 bottom-0 translate-y-full rounded-t-[32px] bg-white px-3 py-6'>
-          <ConfirmRidePopUp setRidePopUpPanal={setRidePopUpPanal} setConfirmRidePopUpPanal={setConfirmRidePopUpPanal} />
+          <ConfirmRidePopUp
+            rideData={rideRequest}
+            setConfirmRidePopUpPanal={setConfirmRidePopUpPanal}
+          />
         </div>
       </div>
     </div> 

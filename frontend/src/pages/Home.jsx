@@ -9,8 +9,10 @@ import VehiclePanal from '../components/VehiclePanal';
 import ConfirmRide from '../components/ConfirmRide';
 import LookingForDriver from '../components/LookingForDriver';
 import WaitForDriver from '../components/WaitForDriver';
+import UserLiveMap from '../components/UserLiveMap';
 import { SocketContext } from '../context/SocketContext';
 import { UserDataContext } from '../context/UserContext';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [pickup, setPickup] = useState('')
@@ -30,10 +32,12 @@ const Home = () => {
   const [ConfirmRidePanal, setConfirmRidePanal] = useState(false)
   const [LookingForDriverPanal, setLookingForDriverPanal] = useState(false)
   const [WaitForDriverPanal, setWaitForDriverPanal] = useState(false)
+  const [currentRide, setCurrentRide] = useState(null)
 
 
   const { socket } = useContext(SocketContext);
   const { user } = useContext(UserDataContext)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!user?._id) return
@@ -183,7 +187,8 @@ const Home = () => {
           withCredentials: true,
         }
       );
-      console.log(response.data);
+      console.log('Ride created:', response.data);
+      setCurrentRide(response.data);
     } catch (err) {
       if (err.response?.status === 401) {
         console.error('Session expired or invalid. Please log in again.');
@@ -193,11 +198,56 @@ const Home = () => {
     }
   }
 
+  useEffect(() => {
+    if (!socket) return
+
+    const handleRideAccepted = (ride) => {
+      setCurrentRide(ride)
+      setLookingForDriverPanal(false)
+      setWaitForDriverPanal(true)
+    }
+
+    socket.on('ride-accepted', handleRideAccepted)
+
+    return () => {
+      socket.off('ride-accepted', handleRideAccepted)
+    }
+  }, [socket])
+
+  useEffect(() => {
+    if (!socket) return
+
+    const handleRideStarted = (ride) => {
+      setCurrentRide(ride)
+      setWaitForDriverPanal(false)
+      try {
+        sessionStorage.setItem('active_ride_user', JSON.stringify(ride))
+      } catch { /* ignore */ }
+      navigate('/Riding', { state: { ride } })
+    }
+
+    socket.on('ride-started', handleRideStarted)
+
+    return () => {
+      socket.off('ride-started', handleRideStarted)
+    }
+  }, [socket, navigate])
+
   return (
     <div className='h-screen relative overflow-hidden'>
-      <img className='w-32 rounded-2xl left-5 top-5 absolute' src={logo} alt="QuickRide Logo" />
+      <img
+        className={`w-32 rounded-2xl left-5 top-5 absolute z-20 transition-opacity ${panalOpen ? 'opacity-0 pointer-events-none' : ''}`}
+        src={logo}
+        alt="QuickRide Logo"
+      />
+      <Link
+        to="/user/logout"
+        className={`absolute top-5 right-4 z-20 h-12 w-12 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-zinc-50 transition-opacity ${panalOpen ? 'opacity-0 pointer-events-none' : ''}`}
+      >
+        <i className="ri-logout-box-line text-xl text-zinc-900 transform scale-x-[-1]" />
+      </Link>
       <div className='h-screen w-screen'>
-        <img className='h-full w-full object-cover' src="https://storage.googleapis.com/support-forums-api/attachment/thread-146048858-12639125651610213305.PNG" alt="" />
+        <UserLiveMap className="h-full w-full object-cover" />
       </div>
       <div className=' flex flex-col justify-end h-screen absolute top-0  w-full '>
 
@@ -267,7 +317,7 @@ const Home = () => {
               if (activeField === 'pickup') setPickup(value)
               else if (activeField === 'destination') setDestination(value)
               setSuggestions([])
-            }}
+            }}          
           />
         </div>
       </div>
@@ -281,7 +331,7 @@ const Home = () => {
         <LookingForDriver pickup={pickup} destination={destination} vehicleType={vehicleType} fare={selectedFare} setLookingForDriverPanal={setLookingForDriverPanal} />
       </div>
       <div ref={WaitForDriverPanalRef} className='fixed pt-7 w-full z-10 bottom-0 translate-y-full bg-white px-3 py-6'>
-        <WaitForDriver WaitForDriverPanal={WaitForDriverPanal} />
+        <WaitForDriver WaitForDriverPanal={WaitForDriverPanal} ride={currentRide} />
       </div>
     </div>
   )

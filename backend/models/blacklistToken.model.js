@@ -6,11 +6,11 @@ const BlacklistTokenSchema=new mongoose.Schema({
         required:true,  
         unique:true
     },
-    createdAt:{
+    createdAt:{ 
         type:Date,
         default:Date.now,
         expires:86400
     }
 })
 
-module.exports=mongoose.model('blacklistToken',BlacklistTokenSchema);
+module.exports = mongoose.models.blacklistToken || mongoose.model('blacklistToken', BlacklistTokenSchema);

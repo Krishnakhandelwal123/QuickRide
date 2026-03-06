@@ -13,11 +13,10 @@ const rideRoutes=require('./routes/ride.routes');
 const corsOptions = {
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 };
 app.use(cors(corsOptions));
-// allow Authorization header and common methods for preflight
-corsOptions.allowedHeaders = ['Content-Type', 'Authorization'];
-corsOptions.methods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'];
 app.use(express.json()); 
 app.use(express.urlencoded({extended:true}));
 connectToDb();

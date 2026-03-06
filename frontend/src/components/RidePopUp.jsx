@@ -1,32 +1,52 @@
 import React from 'react'
 import 'remixicon/fonts/remixicon.css'
 
-const RidePopUp = (props,onAccept,onIgnore,rideRequest) => {
-  // Sample data - replace with actual props
-  const user = rideRequest?.user || {
-    name: 'Rajesh Kumar',
+const RidePopUp = ({
+  setRidePopUpPanal,
+  setConfirmRidePopUpPanal,
+  rideRequest,
+  onAcceptRide,
+}) => {
+  const rideUser = rideRequest?.user
+
+  const user = {
+    name: rideUser
+      ? `${rideUser.fullname?.firstname || ''} ${rideUser.fullname?.lastname || ''}`.trim() ||
+        rideUser.email ||
+        'Passenger'
+      : 'Passenger',
     rating: 4.7,
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&h=150&auto=format&fit=crop'
+    image:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&h=150&auto=format&fit=crop',
   }
-  
-  const pickup = rideRequest?.pickup || {
-    address: 'Vasundhara Colony, MUJ',
-    fullAddress: '245/11-A, Vasundhara Colony, Manipal University Jaipur'
+
+  const pickup = {
+    address: rideRequest?.pickup || 'Pickup',
+    fullAddress: rideRequest?.pickup || 'Pickup location',
   }
-  
-  const destination = rideRequest?.destination || {
-    address: 'Mahesh Nagar, Jaipur',
-    fullAddress: '242/13-B, Mahesh Nagar, Jaipur, Rajasthan'
+
+  const destination = {
+    address: rideRequest?.destination || 'Destination',
+    fullAddress: rideRequest?.destination || 'Destination location',
   }
-  
-  const fare = rideRequest?.fare || 215.60
-  const distance = rideRequest?.distance || '4.2 km'
-  const duration = rideRequest?.duration || '12 min'
+
+  const fare = rideRequest?.fare || 0
+  const distance =
+    typeof rideRequest?.distance === 'number'
+      ? `${(rideRequest.distance / 1000).toFixed(1)} km`
+      : '—'
+  const duration =
+    typeof rideRequest?.duration === 'number'
+      ? `${Math.round(rideRequest.duration / 60)} min`
+      : '—'
 
   return (
     <div className=" ">
       {/* Pull Bar */}
-      <div onClick={() => props.setRidePopUpPanal(false)} className="w-12 h-1 bg-zinc-200 rounded-full mx-auto mt-1 mb-5"></div>
+      <div
+        onClick={() => setRidePopUpPanal(false)}
+        className="w-12 h-1 bg-zinc-200 rounded-full mx-auto mt-1 mb-5"
+      ></div>
 
       <div className="px-5 pb-6">
         {/* User Info Section */}
@@ -109,15 +129,19 @@ const RidePopUp = (props,onAccept,onIgnore,rideRequest) => {
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
           <button
-            onClick={()=>
-                props.setRidePopUpPanal(false)
-            }
+            onClick={() => setRidePopUpPanal(false)}
             className="flex-1 bg-zinc-100 text-zinc-700 py-4 rounded-2xl font-semibold text-sm shadow-sm active:scale-[0.97] transition hover:bg-zinc-200"
           >
             Ignore
           </button>
           <button
-            onClick={()=>props.setConfirmRidePopUpPanal(true)}
+            onClick={() => {
+              if (onAcceptRide) {
+                onAcceptRide()
+              }
+              setRidePopUpPanal(false)
+              setConfirmRidePopUpPanal(true)
+            }}
             className="flex-1 bg-black text-white py-4 rounded-2xl font-semibold text-sm shadow-lg active:scale-[0.97] transition hover:bg-zinc-800"
           >
             Accept

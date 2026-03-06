@@ -1,7 +1,65 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useContext, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { SocketContext } from '../context/SocketContext'
+import { CaptainDataContext } from '../context/CaptainContext'
 
 const FinishRide = (props) => {
+  const ride = props?.ride
+  const rideUser = ride?.user
+  const userName = rideUser
+    ? `${rideUser.fullname?.firstname || ''} ${rideUser.fullname?.lastname || ''}`.trim() ||
+      rideUser.email ||
+      'Rider'
+    : 'Rider'
+
+  const fare = ride?.fare != null ? `₹${ride.fare}` : '₹---'
+  const durationMin =
+    typeof ride?.duration === 'number' ? `${Math.max(1, Math.round(ride.duration / 60))} min` : '—'
+  const distanceKm =
+    typeof ride?.distance === 'number' ? `${(ride.distance / 1000).toFixed(1)} km` : '—'
+  const pickup = ride?.pickup || 'Pickup'
+  const destination = ride?.destination || 'Destination'
+
+  const { socket } = useContext(SocketContext)
+  const { captain } = useContext(CaptainDataContext)
+  const navigate = useNavigate()
+  const [isFinishing, setIsFinishing] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleFinish = () => {
+    if (!socket?.connected) {
+      setError('Not connected. Please try again.')
+      return
+    }
+    if (!ride?._id || !captain?._id) {
+      setError('Ride not available. Please try again.')
+      return
+    }
+
+    setIsFinishing(true)
+    setError('')
+
+    socket.emit(
+      'finish-ride',
+      { rideId: ride._id, captainId: captain._id },
+      (res) => {
+        if (!res?.ok) {
+          setIsFinishing(false)
+          setError(res?.message || 'Failed to finish ride.')
+          return
+        }
+
+        try {
+          sessionStorage.removeItem('active_ride_captain')
+          sessionStorage.removeItem('active_ride_user')
+        } catch { /* ignore */ }
+
+        setIsFinishing(false)
+        navigate('/captain-home')
+      }
+    )
+  }
+
   return (
     <div className="relative px-6  bg-white rounded-t-[40px]">
 
@@ -22,7 +80,7 @@ const FinishRide = (props) => {
           />
           <div>
             <h2 className="text-lg font-bold text-zinc-900">
-              Rajesh Kumar
+              {userName}
             </h2>
             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
               Verified Rider
@@ -31,7 +89,7 @@ const FinishRide = (props) => {
         </div>
         <div className="text-right">
           <p className="text-lg font-black text-zinc-900 leading-none">
-            ₹215.60
+            {fare}
           </p>
           <p className="text-[10px] font-bold text-zinc-500 uppercase mt-1">
             Final Fare
@@ -47,7 +105,7 @@ const FinishRide = (props) => {
             Time
           </p>
           <p className="text-sm font-black text-zinc-900">
-            12 min
+            {durationMin}
           </p>
         </div>
         <div className="text-center border-r border-zinc-100">
@@ -56,7 +114,7 @@ const FinishRide = (props) => {
             Distance
           </p>
           <p className="text-sm font-black text-zinc-900">
-            4.2 km
+            {distanceKm}
           </p>
         </div>
         <div className="text-center">
@@ -79,7 +137,7 @@ const FinishRide = (props) => {
               Pickup
             </p>
             <p className="text-sm font-medium text-zinc-600">
-              Vasundhara Colony, MUJ
+              {pickup}
             </p>
           </div>
         </div>
@@ -90,7 +148,7 @@ const FinishRide = (props) => {
               Dropped At
             </p>
             <p className="text-sm font-semibold text-zinc-900">
-              Mahesh Nagar, Jaipur
+              {destination}
             </p>
           </div>
         </div>
@@ -102,12 +160,24 @@ const FinishRide = (props) => {
           Click finish only after collecting the cash from the rider.
         </p>
 
-        <Link
-          to="/captain-home"
-          className="w-full bg-black text-white py-5 rounded-[22px] font-black text-sm uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center"
+        {error && (
+          <p className="text-xs text-center text-red-600 mb-3 font-semibold">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          disabled={isFinishing}
+          onClick={handleFinish}
+          className={`w-full py-5 rounded-[22px] font-black text-sm uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center ${
+            isFinishing
+              ? 'bg-zinc-300 text-zinc-600 cursor-not-allowed'
+              : 'bg-black text-white'
+          }`}
         >
-          Finish Ride
-        </Link>
+          {isFinishing ? 'Finishing...' : 'Finish Ride'}
+        </button>
       </div>
 
     </div>

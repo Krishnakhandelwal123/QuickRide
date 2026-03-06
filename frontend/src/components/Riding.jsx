@@ -1,21 +1,78 @@
-import React from 'react'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
 import car from '../assets/car.png'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { SocketContext } from '../context/SocketContext'
+import UserLiveMap from './UserLiveMap'
 
 const Riding = () => {
+    const location = useLocation()
+    const navigate = useNavigate()
+    const { socket } = useContext(SocketContext)
+    const [ride, setRide] = useState(() => location.state?.ride || null)
+
+    useEffect(() => {
+        if (location.state?.ride) {
+            setRide(location.state.ride)
+            try {
+                sessionStorage.setItem('active_ride_user', JSON.stringify(location.state.ride))
+            } catch { /* ignore */ }
+            return
+        }
+        try {
+            const cached = sessionStorage.getItem('active_ride_user')
+            if (cached) setRide(JSON.parse(cached))
+        } catch { /* ignore */ }
+    }, [location.state])
+
+    useEffect(() => {
+        if (!socket) return
+
+        const handleRideCompleted = (updatedRide) => {
+            if (ride && updatedRide?._id && ride._id && updatedRide._id !== ride._id) return
+
+            setRide(updatedRide)
+            try {
+                sessionStorage.removeItem('active_ride_user')
+            } catch { /* ignore */ }
+            navigate('/home')
+        }
+
+        socket.on('ride-completed', handleRideCompleted)
+
+        return () => {
+            socket.off('ride-completed', handleRideCompleted)
+        }
+    }, [socket, ride, navigate])
+
+    const captain = ride?.captain
+
+    const captainName = useMemo(() => {
+        if (!captain) return 'Driver'
+        const name = `${captain.fullname?.firstname || ''} ${captain.fullname?.lastname || ''}`.trim()
+        return name || captain.email || 'Driver'
+    }, [captain])
+
+    const vehiclePlate = captain?.vehicle?.plate || ''
+    const vehicleLabel = useMemo(() => {
+        const v = captain?.vehicle
+        if (!v) return 'Vehicle'
+        const label = `${v.color || ''} ${v.vehicleType || ''}`.trim()
+        return label || 'Vehicle'
+    }, [captain])
+
+    const pickup = ride?.pickup || 'Pickup location'
+    const destination = ride?.destination || 'Destination'
+    const fare = ride?.fare != null ? `₹${ride.fare}` : '₹---'
+
     return (
         <div className="h-screen bg-zinc-50 overflow-hidden">
 
             {/* Map Section */}
             <div className="h-[55%] w-full relative">
-                <img
-                    className="h-full w-full object-cover grayscale-[15%]"
-                    src="https://storage.googleapis.com/support-forums-api/attachment/thread-146048858-12639125651610213305.PNG"
-                    alt="map"
-                />
+                <UserLiveMap ride={ride} />
 
                 {/* Back Button */}
-                <Link to="/home" className="absolute top-6 left-6 h-11 w-11 bg-white rounded-xl flex items-center justify-center shadow-md">
+                <Link to="/home" className="absolute top-6 left-6 z-20 h-11 w-11 bg-white rounded-xl flex items-center justify-center shadow-md">
                     <i className="ri-arrow-left-line text-zinc-900 text-lg"></i>
                 </Link>
             </div>
@@ -41,10 +98,10 @@ const Riding = () => {
                         </div>
                         <div>
                             <h2 className="text-lg font-semibold text-zinc-900">
-                                Sarthak Sharma
+                                {captainName}
                             </h2>
                             <p className="text-xs text-zinc-500 mt-0.5">
-                                RJ 14 CP 1234
+                                {vehiclePlate || '—'}
                             </p>
                         </div>
                     </div>
@@ -56,7 +113,7 @@ const Riding = () => {
                             alt="car"
                         />
                         <p className="text-[11px] text-zinc-400 mt-1">
-                            Swift Premium
+                            {vehicleLabel}
                         </p>
                     </div>
                 </div>
@@ -73,7 +130,7 @@ const Riding = () => {
                                 Pickup
                             </p>
                             <p className="text-sm font-medium text-zinc-700">
-                                Vasundhara Colony, MUJ
+                                {pickup}
                             </p>
                         </div>
                     </div>
@@ -86,7 +143,7 @@ const Riding = () => {
                                 Destination
                             </p>
                             <p className="text-sm font-semibold text-zinc-900">
-                                Mahesh Nagar, Jaipur
+                                {destination}
                             </p>
                         </div>
                     </div>
@@ -101,7 +158,7 @@ const Riding = () => {
                             Fare
                         </p>
                         <p className="text-2xl font-semibold text-zinc-900">
-                            ₹215.60
+                            {fare}
                         </p>
                     </div>
 
